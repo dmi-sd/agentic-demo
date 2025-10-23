@@ -8,6 +8,7 @@ public class WeatherService
     private const string ApiBaseUrl = "https://api.open-meteo.com/v1/forecast";
     private const double Latitude = 33.4483; // Phoenix, AZ area
     private const double Longitude = -112.0725;
+    private const int ForecastDays = 5;
 
     public WeatherService(HttpClient httpClient)
     {
@@ -18,7 +19,7 @@ public class WeatherService
     {
         try
         {
-            var url = $"{ApiBaseUrl}?latitude={Latitude}&longitude={Longitude}&daily=temperature_2m_max,temperature_2m_min&timezone=America/Phoenix&forecast_days=5";
+            var url = $"{ApiBaseUrl}?latitude={Latitude}&longitude={Longitude}&daily=temperature_2m_max,temperature_2m_min&timezone=America/Phoenix&forecast_days={ForecastDays}";
 
             var response = await _httpClient.GetFromJsonAsync<OpenMeteoResponse>(url);
 
@@ -28,7 +29,10 @@ public class WeatherService
             }
 
             var forecasts = new List<WeatherForecast>();
-            for (int i = 0; i < response.Daily.Time.Length && i < 5; i++)
+            var maxItems = Math.Min(Math.Min(response.Daily.Time.Length, response.Daily.Temperature2mMax.Length), 
+                                   Math.Min(response.Daily.Temperature2mMin.Length, ForecastDays));
+            
+            for (int i = 0; i < maxItems; i++)
             {
                 if (DateOnly.TryParse(response.Daily.Time[i], out var date))
                 {
@@ -46,9 +50,14 @@ public class WeatherService
 
             return forecasts.ToArray();
         }
-        catch (Exception)
+        catch (HttpRequestException)
         {
-            // Return fallback data if API call fails
+            // Return fallback data if API call fails due to network issues
+            return GetFallbackData();
+        }
+        catch (TaskCanceledException)
+        {
+            // Return fallback data if API call times out
             return GetFallbackData();
         }
     }
@@ -56,8 +65,7 @@ public class WeatherService
     private WeatherForecast[] GetFallbackData()
     {
         var startDate = DateOnly.FromDateTime(DateTime.Now);
-        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        return Enumerable.Range(1, ForecastDays).Select(index => new WeatherForecast
         {
             Date = startDate.AddDays(index),
             TemperatureC = Random.Shared.Next(-20, 55),
