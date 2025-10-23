@@ -6,6 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Add HttpClient for API calls
+builder.Services.AddHttpClient();
+
+// Add WeatherService
+builder.Services.AddScoped<AgenticDemo.Services.WeatherService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
