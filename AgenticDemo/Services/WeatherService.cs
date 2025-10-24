@@ -37,13 +37,11 @@ public class WeatherService
                 if (DateOnly.TryParse(response.Daily.Time[i], out var date))
                 {
                     var maxTemp = response.Daily.Temperature2mMax[i];
-                    var minTemp = response.Daily.Temperature2mMin[i];
-                    var avgTemp = (maxTemp + minTemp) / 2.0;
 
                     forecasts.Add(new WeatherForecast
                     {
                         Date = date,
-                        TemperatureC = (int)Math.Round(avgTemp)
+                        TemperatureC = (int)Math.Round(maxTemp)
                     });
                 }
             }
